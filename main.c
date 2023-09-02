@@ -27,28 +27,15 @@ struct term {
 };
 
 struct term nextTerm(char *s, size_t start);
+struct term findLastArg(char *s, struct term operation);
 double evaluate(char *s, size_t start);
 
 int main()
 {
 	char s[BUFSIZE];
-	size_t end = 0;
-	while (s[end] != '\0' && end < BUFSIZE - 1) ++end;
-	
-	// pray that, by luck, the garbage that is in s happens to form
-	// a syntatically correct polish notation expression C-String
-	
-	// or maybe add a way to get input later
+	fgets(s, BUFSIZE, stdin);
 
-	// I prefer the first option
-
-	/*
-	 * struct term test = nextTerm(s, 0);
-	 * printf("%s\n%d, %d, %d\n", s, test.start, test.end, test.isNum);
-	 * 
-	 * printf("%s\n%lf\n", s, evaluate(s, 0));
-	*/
-	
+	printf("%f\n", evaluate(s, 0));
 	return 0;
 }
 
@@ -82,7 +69,40 @@ struct term nextTerm(char *s, size_t start)
 	}
 	ans.end = end - 1;
 	ans.isNum = isNum;
+
+	// ensure '-' isnt treated as a number
+	if (ans.end == ans.start && s[ans.start] == '-') {
+		ans.isNum = false;
+	}
+
 	return ans;
+}
+
+/*
+ * functions by finding two numbers per operation it goes over
+ */
+struct term findLastArg(char *s, struct term operation)
+{
+	if (operation.isNum) {
+		return operation;
+	}
+
+	// its actually an operation, so we need to actually do our job
+	int numsFound = 0, numsToFind = 2;
+	struct term t = operation;
+	while (numsFound < numsToFind) {
+		t = nextTerm(s, t.end + 1);
+		if (t.isNum) {
+			++numsFound;
+		} else {
+			// we only add one. Although we need to find 2 for
+			// this operation, the result of this operation also
+			// counts towards the total
+			++numsToFind;
+		}
+	}
+
+	return t;
 }
 
 /*
@@ -91,16 +111,25 @@ struct term nextTerm(char *s, size_t start)
 double evaluate(char *s, size_t start)
 {
 	struct term t = nextTerm(s, start);
+	size_t length = t.end - t.start + 1;
 	if (t.isNum) {
 		return strtod(s + start, NULL);
 	}
 
-	if (strncmp(s + t.start, "+", t.end - t.start + 1) == 0) {
-		struct term t1 = nextTerm(s, t.end + 1);
-		struct term t2 = nextTerm(s, t1.end + 1);
+	struct term t1 = nextTerm(s, t.end + 1);
+	double n1 = evaluate(s, t1.start);
 
-		// do the addition (maybe) (if its x + -x) - O(1) btw
-		return 0;
+	struct term last = findLastArg(s, t1);
+	struct term t2 = nextTerm(s, last.end + 1);
+	double n2 = evaluate(s, t2.start);
+	if (strncmp(s + t.start, "+", length) == 0) {
+		return n1 + n2;
+	} else if (strncmp(s + t.start, "-", length) == 0) {
+		return n1 - n2;
+	} else if (strncmp(s + t.start, "*", length) == 0) {
+		return n1 * n2;
+	} else if (strncmp(s + t.start, "/", length) == 0) {
+		return n1 / n2;
 	} else {
 		// no operation has been matched. We can desecrate s
 		// as we will error out anyway
