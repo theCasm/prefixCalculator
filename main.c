@@ -21,10 +21,11 @@
 struct term {
 	size_t start;
 	size_t end;
+	int isNum;
 }
 
 struct term nextTerm(size_t start);
-double evaluate(char *s, size_t start, size_t end);
+double evaluate(char *s, struct term t);
 
 int main()
 {
@@ -45,11 +46,13 @@ int main()
 }
 
 /*
+ * finds the next parenthesis-contained substring OR
  * finds the next continuous block of non-whitespace chars
+ * whichever it finds first
 */
 struct term nextTerm(size_t start)
 {
-
+	
 }
 
 /*
@@ -57,7 +60,7 @@ struct term nextTerm(size_t start)
  * expression with one less pair of beginning and end parenthesis than were
  * there last time.
 */
-int evaluate(char *s, size_t start, size_t end)
+int evaluate(char *s, struct term t)
 {
 	
 }
