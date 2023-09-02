@@ -1,12 +1,13 @@
 /*
  * Author: Aidan Undheim (sorry)
- * Polish notation calculator (hopefully)
+ * Polish notation calculator
  *
  * Description: Polish notation calculator utilizing recursion.
- * Nerdy Description: This calculator works by splitting the input into
- * "chunks" of smaller, polish notation calculations. Eventually, when the
- * chunk is reduced to a simple expression, like + 5 2, it will actually
- * do the thing
+ * Nerdy Description: This calculator works by splitting something like
+ * eval(+ exp1 exp2) into eval(exp1) + eval(exp2) recursively. Eventually 
+ * it reaches the point where it is evaluating just a number on its own, at
+ * which point it just has to turn the string into the actual number 
+ * representation.
 */
 
 #include <stdio.h>
