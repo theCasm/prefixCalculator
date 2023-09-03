@@ -34,9 +34,13 @@ double evaluate(char *s, size_t start);
 int main()
 {
 	char s[BUFSIZE];
-	fgets(s, BUFSIZE, stdin);
+	printf("~ ");
+	while (fgets(s, BUFSIZE, stdin) != NULL) {
+		printf("%f\n", evaluate(s, 0));
+		printf("~ ");
+	}
+	putchar('\n');
 
-	printf("%f\n", evaluate(s, 0));
 	return 0;
 }
 
@@ -54,22 +58,21 @@ struct term nextTerm(char *s, size_t start)
 	}
 	ans.start = start;
 
-	int isNum = true;
-	if (!isdigit(s[start]) && s[start] != '-') {
-		isNum = false;
+	ans.isNum = true;
+	if (!isdigit(s[start]) && s[start] != '-' && s[start] != '.') {
+		ans.isNum = false;
 	}
 
-	size_t end = start + 1;
-	while (!isspace(s[end]) && s[end] != '\0') {
-		if (!isdigit(s[end]) && s[end] != '.' && s[end] != 'e'
-		&& s[end] != 'E') {
-			isNum = false;
+	ans.end = start + 1;
+	while (!isspace(s[ans.end]) && s[ans.end] != '\0') {
+		if (!isdigit(s[ans.end]) && s[ans.end] != '.' && s[ans.end] != 'e'
+		&& s[ans.end] != 'E') {
+			ans.isNum = false;
 		}
 
-		++end;
+		++ans.end;
 	}
-	ans.end = end - 1;
-	ans.isNum = isNum;
+	--ans.end;
 
 	// ensure '-' isnt treated as a number
 	if (ans.end == ans.start && s[ans.start] == '-') {
@@ -84,16 +87,17 @@ struct term nextTerm(char *s, size_t start)
  */
 struct term findLastArg(char *s, struct term operation)
 {
+	struct term currentT;
+	int numsFound = 0, numsToFind = 2;
 	if (operation.isNum) {
 		return operation;
 	}
 
 	// its actually an operation, so we need to actually do our job
-	int numsFound = 0, numsToFind = 2;
-	struct term t = operation;
+	currentT = operation;
 	while (numsFound < numsToFind) {
-		t = nextTerm(s, t.end + 1);
-		if (t.isNum) {
+		currentT = nextTerm(s, currentT.end + 1);
+		if (currentT.isNum) {
 			++numsFound;
 		} else {
 			// we only add one. Although we need to find 2 for
@@ -103,7 +107,7 @@ struct term findLastArg(char *s, struct term operation)
 		}
 	}
 
-	return t;
+	return currentT;
 }
 
 /*
@@ -111,32 +115,36 @@ struct term findLastArg(char *s, struct term operation)
 */
 double evaluate(char *s, size_t start)
 {
-	struct term t = nextTerm(s, start);
-	size_t length = t.end - t.start + 1;
-	if (t.isNum) {
+	struct term op, term1, term2, lastArg;
+	double num1, num2;
+	size_t length;
+
+	op = nextTerm(s, start);
+	length = op.end - op.start + 1;
+	if (op.isNum) {
 		return strtod(s + start, NULL);
 	}
 
-	struct term t1 = nextTerm(s, t.end + 1);
-	double n1 = evaluate(s, t1.start);
+	term1 = nextTerm(s, op.end + 1);
+	num1 = evaluate(s, term1.start);
 
-	struct term last = findLastArg(s, t1);
-	struct term t2 = nextTerm(s, last.end + 1);
-	double n2 = evaluate(s, t2.start);
-	if (strncmp(s + t.start, "+", length) == 0) {
-		return n1 + n2;
-	} else if (strncmp(s + t.start, "-", length) == 0) {
-		return n1 - n2;
-	} else if (strncmp(s + t.start, "*", length) == 0) {
-		return n1 * n2;
-	} else if (strncmp(s + t.start, "/", length) == 0) {
-		return n1 / n2;
+	lastArg = findLastArg(s, term1);
+	term2 = nextTerm(s, lastArg.end + 1);
+	num2 = evaluate(s, term2.start);
+	if (strncmp(s + op.start, "+", length) == 0) {
+		return num1 + num2;
+	} else if (strncmp(s + op.start, "-", length) == 0) {
+		return num1 - num2;
+	} else if (strncmp(s + op.start, "*", length) == 0) {
+		return num1 * num2;
+	} else if (strncmp(s + op.start, "/", length) == 0) {
+		return num1 / num2;
 	} else {
-		// no operation has been matched. We can desecrate s
-		// as we will error out anyway
-		s[t.end + 1] = '\0';
-		fprintf(stderr, "Unknown Operation: %s\n", s + t.start);
+		/* no operation has been matched. We can desecrate s
+		 * as we will error out anyway
+		*/
+		s[op.end + 1] = '\0';
+		fprintf(stderr, "Unknown Operation: %s\n", s + op.start);
 		exit(1);
 	}
-	return 1;
 }
