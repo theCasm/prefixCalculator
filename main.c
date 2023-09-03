@@ -24,6 +24,7 @@
 struct term {
 	size_t start;
 	size_t end;
+	int isVar;
 	int isNum;
 };
 
@@ -31,12 +32,15 @@ struct term nextTerm(char *s, size_t start);
 struct term findLastArg(char *s, struct term operation);
 double evaluate(char *s, size_t start);
 
+static double vars[26];
+static double last = 0;
+
 int main()
 {
 	char s[BUFSIZE];
 	printf("~ ");
 	while (fgets(s, BUFSIZE, stdin) != NULL) {
-		printf("%f\n", evaluate(s, 0));
+		printf("%f\n", (last = evaluate(s, 0)));
 		printf("~ ");
 	}
 	putchar('\n');
@@ -79,6 +83,17 @@ struct term nextTerm(char *s, size_t start)
 		ans.isNum = false;
 	}
 
+	// single uppercase letters are variable
+	ans.isVar = false;
+	if (ans.end == ans.start && 0x41 <= s[ans.start] && s[ans.start] <= 0x5A) {
+		ans.isVar = true;
+	}
+
+	// special variable
+	if (ans.end - ans.start == 2 && strncmp(s + ans.start, "ans", 3) == 0) {
+		ans.isVar = true;
+	}
+
 	return ans;
 }
 
@@ -89,7 +104,7 @@ struct term findLastArg(char *s, struct term operation)
 {
 	struct term currentT;
 	int numsFound = 0, numsToFind = 2;
-	if (operation.isNum) {
+	if (operation.isNum || operation.isVar) {
 		return operation;
 	}
 
@@ -97,7 +112,7 @@ struct term findLastArg(char *s, struct term operation)
 	currentT = operation;
 	while (numsFound < numsToFind) {
 		currentT = nextTerm(s, currentT.end + 1);
-		if (currentT.isNum) {
+		if (currentT.isNum || currentT.isVar) {
 			++numsFound;
 		} else {
 			// we only add one. Although we need to find 2 for
@@ -125,6 +140,14 @@ double evaluate(char *s, size_t start)
 		return strtod(s + start, NULL);
 	}
 
+	if (op.isVar) {
+		if (op.start == op.end) {
+			return vars[s[op.start] - 0x41];
+		} else {
+			return last;
+		}
+	}
+
 	term1 = nextTerm(s, op.end + 1);
 	num1 = evaluate(s, term1.start);
 
@@ -139,6 +162,18 @@ double evaluate(char *s, size_t start)
 		return num1 * num2;
 	} else if (strncmp(s + op.start, "/", length) == 0) {
 		return num1 / num2;
+	} else if (strncmp(s + op.start, "sto", length) == 0) {
+		if (!term2.isVar) {
+			fputs("Cannot sto into non-variable\n", stderr);
+			exit(1);
+		}
+
+		if (term2.start == term2.end) {
+			vars[(int)(s[term2.start] - 0x41)] = num1;
+		} else {
+			last = num1;
+		}
+		return num1;
 	} else {
 		/* no operation has been matched. We can desecrate s
 		 * as we will error out anyway
